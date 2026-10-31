@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScamShield — AI-Powered Threat Scan</title>
+<meta name="description" content="ScamShield: paste a suspicious message, email, or link for analysis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --bg:#060912; --bg2:#0b1220; --text:#eef2f8; --muted:#a3b0c4; --cyan:#67d4ea; --cyan-d:#2fb4d0; --violet:#8f84f0;
+    --track:#1a2335; --line:rgba(148,163,184,.22); --glass:rgba(14,21,36,.66);
+  }
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; min-height:100vh; color:var(--text); font-family:'Space Grotesk',system-ui,sans-serif; overflow-x:hidden;
+    background:radial-gradient(900px 600px at 85% -10%,rgba(143,132,240,.16),transparent 60%),
+               radial-gradient(800px 500px at -10% 25%,rgba(103,212,234,.09),transparent 60%),
+               linear-gradient(180deg,var(--bg2),var(--bg) 65%);
+    background-attachment:fixed;
+  }
+  .font-display{font-family:'Chakra Petch','Space Grotesk',system-ui,sans-serif}
+  .text-muted{color:var(--muted)}
+
+  /* Background layers */
+  .bg-layer{position:fixed; inset:0; pointer-events:none; z-index:0}
+  .grid-bg{
+    background-image:linear-gradient(rgba(103,212,234,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(103,212,234,.05) 1px,transparent 1px);
+    background-size:60px 60px; animation:gridMove 30s linear infinite;
+    -webkit-mask-image:radial-gradient(ellipse at 50% 25%,#000 20%,transparent 75%); mask-image:radial-gradient(ellipse at 50% 25%,#000 20%,transparent 75%);
+  }
+  .scanlines{background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px)}
+  .scan-sweep{position:fixed; left:0; right:0; top:-25vh; height:25vh; pointer-events:none; z-index:1;
+    background:linear-gradient(180deg,transparent,rgba(103,212,234,.035),transparent); animation:sweep 16s linear infinite}
+  .orb{position:absolute; border-radius:50%; filter:blur(90px); opacity:.3; animation:floatY 22s ease-in-out infinite}
+  .particle{position:absolute; left:var(--x); bottom:-10px; width:var(--s); height:var(--s); border-radius:50%; background:var(--c); opacity:0;
+    animation:rise var(--d) linear var(--dl) infinite}
+
+  /* Glass */
+  .glass{position:relative; background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+    border:1px solid var(--line); border-radius:1.25rem; box-shadow:0 20px 50px -24px rgba(0,0,0,.85),0 0 0 1px rgba(255,255,255,.02) inset;
+    transition:border-color .3s ease,box-shadow .3s ease}
+  .glass:hover{border-color:rgba(103,212,234,.4); box-shadow:0 24px 60px -24px rgba(0,0,0,.9),0 0 36px -14px rgba(103,212,234,.35)}
+  .glass::before{content:""; position:absolute; inset:-1px; border-radius:inherit; padding:1px; pointer-events:none; opacity:.5;
+    background:linear-gradient(120deg,transparent 35%,rgba(143,132,240,.8),rgba(103,212,234,.7),transparent 65%); background-size:300% 300%; animation:borderFlow 14s linear infinite;
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+            mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+
+  /* Text */
+  .holo-text{background:linear-gradient(90deg,#eef2f8 0%,#9be3f2 40%,#c1b9ff 70%,#eef2f8 100%); background-size:250% 100%;
+    -webkit-background-clip:text; background-clip:text; color:transparent; animation:shimmer 10s linear infinite}
+  .reveal-line{display:block; overflow:hidden; padding-bottom:.08em}
+  .reveal-line > span{display:block; transform:translateY(105%); opacity:0; animation:reveal 1s cubic-bezier(.2,.8,.2,1) forwards}
+  .reveal-line:nth-child(2) > span{animation-delay:.3s}
+  .fade-up{opacity:0; transform:translateY(12px); animation:fadeUp .9s ease forwards}
+  .d1{animation-delay:.6s}.d2{animation-delay:.8s}.d3{animation-delay:1s}
+
+  /* Pills */
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 0 rgba(103,212,234,.5); animation:pulse 3s ease-out infinite}
+  .dot.idle{background:#7b8aa3; animation:none; box-shadow:none}
+  .chip{display:inline-flex; align-items:center; gap:.5rem; padding:.45rem .85rem; border-radius:999px; font-size:.85rem; color:var(--text);
+    border:1px solid var(--line); background:rgba(148,163,184,.07); transition:border-color .25s,background .25s}
+  .chip:hover{border-color:rgba(103,212,234,.5); background:rgba(103,212,234,.08)}
+
+  /* Fields */
+  .field{width:100%; resize:vertical; color:var(--text); background:rgba(5,8,16,.7); border:1px solid rgba(148,163,184,.3);
+    border-radius:1rem; padding:1rem 1.1rem; font-size:1rem; line-height:1.6; outline:none; transition:border-color .25s,box-shadow .25s}
+  .field::placeholder{color:#8b99ae}
+  .field:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(103,212,234,.22)}
+  .field[readonly]{cursor:default}
+  .scan-wrap{position:relative; border-radius:1rem; overflow:hidden}
+  .scan-wrap::after{content:""; position:absolute; left:0; right:0; top:0; height:1px; pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(103,212,234,.7),transparent); box-shadow:0 0 14px 2px rgba(103,212,234,.25); animation:scanLine 9s ease-in-out infinite}
+
+  /* Button */
+  .cta{position:relative; overflow:hidden; isolation:isolate; display:inline-flex; align-items:center; justify-content:center; gap:.65rem;
+    padding:.95rem 2rem; border:0; border-radius:999px; font-weight:700; letter-spacing:.03em; color:#04121a; cursor:pointer;
+    background:linear-gradient(110deg,#7ddcf0,#5bc4e0 55%,#a79df5); box-shadow:0 0 22px -4px rgba(103,212,234,.5);
+    transition:transform .2s ease,box-shadow .3s ease}
+  .cta::before{content:""; position:absolute; top:0; bottom:0; width:40%; left:-60%; z-index:-1; transform:skewX(-20deg);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent); animation:btnScan 6s ease-in-out infinite}
+  .cta:hover{transform:translateY(-2px); box-shadow:0 0 36px -2px rgba(103,212,234,.7),0 0 60px -10px rgba(143,132,240,.5)}
+  .cta:active{transform:translateY(0) scale(.98); box-shadow:0 0 16px -2px rgba(103,212,234,.6)}
+  a:focus-visible,button:focus-visible{outline:3px solid #fff; outline-offset:3px}
+
+  /* Gauge (empty state) */
+  .gauge{position:relative; height:16px; border-radius:999px; background:var(--track); border:1px solid rgba(148,163,184,.3); overflow:hidden}
+  .gauge-ticks{position:absolute; inset:0; background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgba(148,163,184,.18) calc(10% - 1px) 10%)}
+  .gauge-scan{position:absolute; top:0; bottom:0; width:28%; left:-30%; border-radius:999px;
+    background:linear-gradient(90deg,transparent,rgba(103,212,234,.35),transparent); animation:gaugeScan 4.5s ease-in-out infinite}
+
+  /* Hologram */
+  .holo{animation:floatY 9s ease-in-out infinite}
+  .ring{transform-origin:center; transform-box:fill-box; animation:spin 50s linear infinite}
+  .ring.rev{animation-duration:70s; animation-direction:reverse}
+  .dash{stroke-dasharray:6 10; animation:dashMove 8s linear infinite}
+  .beam{animation:beam 6s ease-in-out infinite}
+  .circuit{stroke-dasharray:120; stroke-dashoffset:120; animation:draw 8s ease-in-out infinite}
+  .node{animation:beam 6s ease-in-out infinite}
+
+  @keyframes gridMove{to{background-position:60px 60px}}
+  @keyframes sweep{to{transform:translateY(150vh)}}
+  @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  @keyframes rise{0%{opacity:0; transform:translateY(0)}15%{opacity:.6}85%{opacity:.35}100%{opacity:0; transform:translateY(-105vh)}}
+  @keyframes borderFlow{to{background-position:300% 0}}
+  @keyframes shimmer{to{background-position:250% 0}}
+  @keyframes reveal{to{transform:translateY(0); opacity:1}}
+  @keyframes fadeUp{to{opacity:1; transform:none}}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(103,212,234,.45)}70%,100%{box-shadow:0 0 0 9px rgba(103,212,234,0)}}
+  @keyframes scanLine{0%,100%{top:0; opacity:0}10%,90%{opacity:.8}50%{top:calc(100% - 1px)}}
+  @keyframes btnScan{0%{left:-60%}40%,100%{left:130%}}
+  @keyframes gaugeScan{0%{left:-30%}100%{left:105%}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes dashMove{to{stroke-dashoffset:-64}}
+  @keyframes beam{0%,100%{opacity:.35}50%{opacity:.8}}
+  @keyframes draw{0%{stroke-dashoffset:120}50%,100%{stroke-dashoffset:0}}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important}
+    .reveal-line > span,.fade-up{opacity:1; transform:none}
+    .particle,.scan-sweep,.gauge-scan{display:none}
+    .circuit{stroke-dashoffset:0}
+  }
+</style>
+</head>
+<body>
+
+<!-- Ambient background (decorative) -->
+<div class="bg-layer grid-bg" aria-hidden="true"></div>
+<div class="bg-layer" aria-hidden="true">
+  <div class="orb" style="width:340px;height:340px;left:-90px;top:20%;background:#2fb4d0"></div>
+  <div class="orb" style="width:420px;height:420px;right:-130px;top:2%;background:#8f84f0;animation-delay:-8s"></div>
+  <div class="orb" style="width:300px;height:300px;left:42%;bottom:-120px;background:#6f63d8;opacity:.2;animation-delay:-14s"></div>
+  <span class="particle" style="--x:8%;--s:3px;--c:#67d4ea;--d:28s;--dl:0s"></span>
+  <span class="particle" style="--x:21%;--s:2px;--c:#8f84f0;--d:34s;--dl:-12s"></span>
+  <span class="particle" style="--x:35%;--s:3px;--c:#67d4ea;--d:30s;--dl:-6s"></span>
+  <span class="particle" style="--x:52%;--s:2px;--c:#8f84f0;--d:36s;--dl:-20s"></span>
+  <span class="particle" style="--x:67%;--s:3px;--c:#67d4ea;--d:29s;--dl:-9s"></span>
+  <span class="particle" style="--x:80%;--s:2px;--c:#8f84f0;--d:33s;--dl:-16s"></span>
+  <span class="particle" style="--x:92%;--s:3px;--c:#67d4ea;--d:31s;--dl:-3s"></span>
+</div>
+<div class="bg-layer scanlines" aria-hidden="true"></div>
+<div class="scan-sweep" aria-hidden="true"></div>
+
+<div class="relative z-10">
+
+<!-- NAVIGATION -->
+<header class="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
+  <nav aria-label="Primary" class="glass flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+    <a href="#top" class="flex items-center gap-3 rounded-lg" aria-label="ScamShield home">
+      <svg class="h-10 w-10 drop-shadow-[0_0_10px_rgba(103,212,234,.55)]" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <defs><linearGradient id="navShield" x1="0" y1="0" x2="48" y2="48"><stop stop-color="#67d4ea"/><stop offset="1" stop-color="#8f84f0"/></linearGradient></defs>
+        <path d="M24 3 6 10v13c0 10.5 7.4 18.6 18 22 10.6-3.4 18-11.5 18-22V10L24 3Z" fill="rgba(103,212,234,.1)" stroke="url(#navShield)" stroke-width="2.2"/>
+        <path d="M24 14v20M16 20h16M16 28h16" stroke="url(#navShield)" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
+      </svg>
+      <span class="leading-none">
+        <span class="font-display block text-xl font-bold tracking-wide" style="color:var(--text)">ScamShield</span>
+        <span class="text-muted mt-1 block text-[11px] font-semibold uppercase tracking-[.24em]">Threat Intelligence</span>
+      </span>
+    </a>
+    <div class="flex items-center gap-2 rounded-full border px-3 py-1.5" style="border-color:rgba(103,212,234,.4);background:rgba(103,212,234,.08)" role="status">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="text-xs font-semibold tracking-[.16em]" style="color:#bdeaf5">SYSTEM READY</span>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+
+<!-- HERO -->
+<section class="mx-auto grid max-w-7xl items-center gap-10 px-4 pb-10 pt-12 sm:px-6 lg:grid-cols-2 lg:gap-6 lg:px-8 lg:pt-20" aria-labelledby="heroTitle">
+  <div>
+    <p class="fade-up inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[.22em]" style="border-color:rgba(143,132,240,.5);background:rgba(143,132,240,.12);color:#d4cfff">
+      <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/></svg>
+      AI-Powered Threat Scan
+    </p>
+    <h1 id="heroTitle" class="font-display mt-6 text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
+      <span class="reveal-line"><span class="holo-text">Detect scams</span></span>
+      <span class="reveal-line"><span>before they detect you.</span></span>
+    </h1>
+    <p class="text-muted fade-up d1 mt-6 max-w-xl text-base leading-relaxed sm:text-lg">
+      Paste a suspicious message, email, or link and ScamShield will analyze it for signs of fraud. Your risk score and safety guidance will appear here once analysis is connected, so you can decide what to do before you click, reply, or pay.
+    </p>
+    <ul class="fade-up d2 mt-8 flex flex-wrap gap-3" aria-label="Highlights">
+      <li class="chip"><svg class="h-4 w-4" style="color:var(--cyan)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 0 1 18 0"/><path d="m12 12 4-4"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>Visual risk meter</li>
+      <li class="chip"><svg class="h-4 w-4" style="color:var(--cyan)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privacy-minded</li>
+      <li class="chip"><svg class="h-4 w-4" style="color:var(--violet)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="8" y="8" width="8" height="8" rx="1.5"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>Plain-language guidance</li>
+    </ul>
+  </div>
+
+  <!-- Holographic shield -->
+  <div class="relative mx-auto w-full max-w-md lg:max-w-lg" aria-hidden="true">
+    <div class="holo">
+      <svg viewBox="0 0 480 480" class="h-auto w-full overflow-visible" fill="none">
+        <defs>
+          <linearGradient id="hg1" x1="120" y1="60" x2="360" y2="420"><stop stop-color="#67d4ea"/><stop offset="1" stop-color="#8f84f0"/></linearGradient>
+          <radialGradient id="hg2" cx=".5" cy=".5" r=".5"><stop stop-color="#67d4ea" stop-opacity=".25"/><stop offset="1" stop-color="#67d4ea" stop-opacity="0"/></radialGradient>
+          <linearGradient id="hg3" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#67d4ea" stop-opacity=".4"/><stop offset="1" stop-color="#8f84f0" stop-opacity="0"/></linearGradient>
+          <filter id="hglow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          <clipPath id="shieldClip"><path d="M240 92 140 130v90c0 64 42 112 100 134 58-22 100-70 100-134v-90L240 92Z"/></clipPath>
+        </defs>
+        <circle cx="240" cy="240" r="215" fill="url(#hg2)"/>
+        <g class="ring"><circle cx="240" cy="240" r="200" stroke="#67d4ea" stroke-opacity=".35" stroke-width="1.5" class="dash"/>
+          <circle cx="240" cy="40" r="5" fill="#67d4ea" filter="url(#hglow)"/><circle cx="440" cy="240" r="4" fill="#8f84f0" filter="url(#hglow)"/></g>
+        <g class="ring rev"><circle cx="240" cy="240" r="170" stroke="#8f84f0" stroke-opacity=".45" stroke-width="1.5" stroke-dasharray="2 14"/>
+          <circle cx="70" cy="240" r="4" fill="#8f84f0" filter="url(#hglow)"/><circle cx="240" cy="410" r="4" fill="#67d4ea" filter="url(#hglow)"/></g>
+        <ellipse cx="240" cy="438" rx="120" ry="18" stroke="#67d4ea" stroke-opacity=".45"/>
+        <ellipse cx="240" cy="438" rx="80" ry="10" stroke="#8f84f0" stroke-opacity=".55"/>
+        <path d="M150 436 140 300M330 436 340 300" stroke="url(#hg3)" class="beam"/>
+        <path d="M180 436 168 300M300 436 312 300" stroke="url(#hg3)" class="beam" style="animation-delay:-3s"/>
+        <path d="M240 92 140 130v90c0 64 42 112 100 134 58-22 100-70 100-134v-90L240 92Z" fill="rgba(103,212,234,.07)" stroke="url(#hg1)" stroke-width="3" filter="url(#hglow)"/>
+        <path d="M240 116 160 146v74c0 52 33 91 80 110 47-19 80-58 80-110v-74l-80-30Z" stroke="#67d4ea" stroke-opacity=".35"/>
+        <g clip-path="url(#shieldClip)">
+          <g stroke="#67d4ea" stroke-opacity=".12"><path d="M140 160h200M140 190h200M140 220h200M140 250h200M140 280h200M140 310h200"/><path d="M180 90v280M210 90v280M240 90v280M270 90v280M300 90v280"/></g>
+          <rect x="130" y="90" width="220" height="6" fill="#67d4ea" opacity=".35"><animate attributeName="y" values="90;350;90" dur="9s" repeatCount="indefinite"/></rect>
+        </g>
+        <g stroke="#67d4ea" stroke-width="1.5" stroke-linecap="round">
+          <path class="circuit" d="M240 336v-30l-28-24v-24"/><path class="circuit" d="M240 306l28-24v-24" style="animation-delay:-2s"/>
+          <path class="circuit" d="M172 214h30l14 14" style="animation-delay:-4s"/><path class="circuit" d="M308 214h-30l-14 14" style="animation-delay:-1s"/>
+        </g>
+        <g fill="#8f84f0"><circle class="node" cx="212" cy="258" r="3"/><circle class="node" cx="268" cy="258" r="3"/><circle class="node" cx="172" cy="214" r="3"/><circle class="node" cx="308" cy="214" r="3"/></g>
+        <g filter="url(#hglow)">
+          <rect x="214" y="196" width="52" height="42" rx="8" fill="rgba(6,9,18,.8)" stroke="#67d4ea" stroke-width="2.2"/>
+          <path d="M224 196v-12a16 16 0 0 1 32 0v12" stroke="#67d4ea" stroke-width="2.2"/>
+          <circle cx="240" cy="214" r="5" fill="#8f84f0"/><path d="M240 218v10" stroke="#8f84f0" stroke-width="2.5" stroke-linecap="round"/>
+        </g>
+        <g font-family="Chakra Petch,monospace" font-size="11" fill="#9bdcec" opacity=".75">
+          <text x="40" y="150">NEURAL.LINK</text><text x="40" y="168" fill="#b3abf7">STANDBY</text>
+          <text x="352" y="330">SCAN.MODULE</text><text x="352" y="348" fill="#b3abf7">READY</text>
+        </g>
+        <path d="M40 176h70l14 14" stroke="#8f84f0" stroke-opacity=".6"/><path d="M352 354h60" stroke="#67d4ea" stroke-opacity=".6"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- WORKSPACE -->
+<section class="mx-auto grid max-w-7xl gap-6 px-4 pb-16 sm:px-6 lg:grid-cols-5 lg:px-8" aria-label="Scam analysis workspace">
+
+  <!-- Threat scanner -->
+  <article class="glass p-5 sm:p-8 lg:col-span-3" aria-labelledby="scanTitle">
+    <h2 id="scanTitle" class="font-display text-2xl font-bold sm:text-3xl">Analyze a suspicious message</h2>
+    <p class="mt-3 flex items-start gap-2 text-sm" style="color:#c5d0e0">
+      <svg class="mt-0.5 h-4 w-4 shrink-0" style="color:var(--cyan)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      Remove passwords, OTPs, and private information before analysis.
+    </p>
+
+    <label for="scamInput" class="mb-2 mt-6 block text-sm font-medium" style="color:var(--text)">Suspicious message, email, or link</label>
+    <div class="scan-wrap">
+      <textarea id="scamInput" name="scamInput" rows="9" class="field" placeholder="Paste a suspicious email, text, direct message, or link here…" spellcheck="false"></textarea>
+    </div>
+
+    <div class="mt-6 flex flex-col items-stretch gap-4 sm:flex-row sm:items-center">
+      <button id="analyzeBtn" type="button" class="cta">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="M8 11h6"/></svg>
+        Analyze Message
+      </button>
+      <input type="file" id="imageUpload" name="imageUpload" accept="image/*" hidden>
+      <p class="text-muted text-sm">Analysis will be available when the service is connected.</p>
+    </div>
+
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">
+      <section class="rounded-2xl border p-4" style="border-color:var(--line);background:rgba(148,163,184,.05)" aria-labelledby="privTitle">
+        <div class="flex items-center gap-2" style="color:#bdeaf5">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+          <h3 id="privTitle" class="font-display font-semibold">Privacy-first scan</h3>
+        </div>
+        <p class="text-muted mt-2 text-sm leading-relaxed">Share only what is needed to judge the message. Leave out passwords, one-time codes, and financial details.</p>
+      </section>
+      <section class="rounded-2xl border p-4" style="border-color:var(--line);background:rgba(148,163,184,.05)" aria-labelledby="checksTitle">
+        <div class="flex items-center gap-2" style="color:#d4cfff">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <h3 id="checksTitle" class="font-display font-semibold">What ScamShield checks</h3>
+        </div>
+        <p class="text-muted mt-2 text-sm leading-relaxed">Urgency language, unsafe links, identity spoofing, and requests for sensitive details.</p>
+      </section>
+    </div>
+  </article>
+
+  <div class="flex flex-col gap-6 lg:col-span-2">
+
+    <!-- Risk score: empty state -->
+    <article class="glass p-5 sm:p-8" aria-labelledby="riskTitle">
+      <h2 id="riskTitle" class="font-display text-2xl font-bold">Risk Score</h2>
+
+      <!-- Backend will populate the risk score and risk level here. -->
+      <div class="mt-6">
+        <p class="font-display flex items-center gap-3 text-2xl font-semibold" style="color:var(--text)">
+          <svg class="h-6 w-6 shrink-0" style="color:#7b8aa3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke-dasharray="3 4"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>
+          Awaiting analysis
+        </p>
+        <p class="text-muted mt-2 text-sm">No score yet. Submit a message to see its risk level.</p>
+
+        <div class="mt-6">
+          <div id="riskGauge" class="gauge" role="progressbar" aria-label="Risk score" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Awaiting analysis">
+            <div class="gauge-ticks"></div>
+            <div class="gauge-scan"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center gap-2 border-t pt-4 text-xs font-semibold tracking-[.18em]" style="border-color:var(--line);color:var(--muted)">
+        <span class="dot idle" aria-hidden="true"></span>AI ENGINE STANDBY
+      </div>
+    </article>
+
+    <!-- Assessment: empty state -->
+    <article class="glass flex-1 p-5 sm:p-8" aria-labelledby="assessTitle">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 id="assessTitle" class="font-display text-2xl font-bold">Assessment</h2>
+        <span class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold tracking-wider" style="border-color:rgba(148,163,184,.4);background:rgba(148,163,184,.1);color:#c5d0e0">
+          <span class="dot idle" aria-hidden="true"></span>NO ANALYSIS YET
+        </span>
+      </div>
+
+      <!-- Backend will populate the assessment, warning signals, and recommendation here. -->
+      <label for="resultText" class="sr-only">Risk assessment and safety guidance</label>
+      <textarea id="resultText" name="resultText" rows="6" readonly class="field mt-5" placeholder="Submit a message to receive a risk assessment and safety guidance."></textarea>
+    </article>
+  </div>
+</section>
+</main>
+
+<!-- FOOTER -->
+<footer class="mx-auto max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+  <div class="glass flex flex-col items-center justify-between gap-4 px-6 py-5 text-center sm:flex-row sm:text-left">
+    <p class="flex items-center gap-3 text-sm" style="color:var(--text)">
+      <svg class="h-5 w-5 shrink-0" style="color:var(--cyan)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15.5" r="1" fill="currentColor"/></svg>
+      Privacy-first visual analysis workspace
+    </p>
+    <p class="text-muted text-xs sm:max-w-md sm:text-right">ScamShield provides guidance, not a guarantee. Avoid clicking unfamiliar links or sharing sensitive information.</p>
+  </div>
+</footer>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
