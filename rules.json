@@ -49,7 +49,8 @@
       "exclude_any": [
         "\\b(do not share|never share|don.t share)\\b"
       ],
-      "reason": "A message asks the recipient to disclose an OTP, PIN, CVV or payment-card credentials."
+      "reason": "A message asks the recipient to disclose an OTP, PIN, CVV or payment-card credentials.",
+      "reason_hi": "यह संदेश पाने वाले से OTP, PIN, CVV या पेमेंट कार्ड की जानकारी बताने या शेयर करने को कहता है।"
     },
     {
       "id": "SCAM_DIGITAL_ARREST_OR_POLICE_THREAT",
@@ -63,7 +64,8 @@
       "match_all": [
         "\\b(transfer|pay|send|deposit|settlement amount|verification account)\\b"
       ],
-      "reason": "An authority-style threat is combined with a demand for money."
+      "reason": "An authority-style threat is combined with a demand for money.",
+      "reason_hi": "अधिकारी बनकर डराने के साथ पैसे भी मांगे जा रहे हैं।"
     },
     {
       "id": "SCAM_FAKE_JOB_UPFRONT_FEE",
@@ -77,7 +79,8 @@
         "\\b(pay|payment|fee|deposit|recharge|transfer)\\b",
         "\\b(registration|processing|onboarding|uniform|software|security|booking|activation)\\b"
       ],
-      "reason": "A job or internship offer asks for an upfront payment or deposit."
+      "reason": "A job or internship offer asks for an upfront payment or deposit.",
+      "reason_hi": "नौकरी या इंटर्नशिप का ऑफर देने के लिए पहले पैसे या जमा राशि देने को कहा गया है।"
     },
     {
       "id": "SCAM_GUARANTEED_INVESTMENT_RETURN",
@@ -90,7 +93,8 @@
       "match_all": [
         "\\b(invest|investment|crypto|trading|deposit|recharge|vip group)\\b"
       ],
-      "reason": "An investment message promises guaranteed or impossible returns."
+      "reason": "An investment message promises guaranteed or impossible returns.",
+      "reason_hi": "निवेश के इस संदेश में पक्के या नामुमकिन मुनाफ़े का वादा किया गया है।"
     },
     {
       "id": "SCAM_FAKE_REFUND_OR_UPI_COLLECT",
@@ -103,7 +107,8 @@
       "match_all": [
         "\\b(approve the collect request|scan (our )?qr|enter your upi pin|pay to receive|share the otp)\\b"
       ],
-      "reason": "A supposed refund or reward requires approving a collect request, sharing an OTP or entering a UPI PIN."
+      "reason": "A supposed refund or reward requires approving a collect request, sharing an OTP or entering a UPI PIN.",
+      "reason_hi": "कथित रिफंड या इनाम पाने के लिए कलेक्ट रिक्वेस्ट मंज़ूर करने, OTP शेयर करने या UPI PIN डालने को कहा गया है।"
     },
     {
       "id": "SCAM_BANK_KYC_OR_ACCOUNT_THREAT",
@@ -117,7 +122,8 @@
         "\\b(blocked|blocked within|will be blocked|suspend|deactivat|blacklisted|expire|final warning)\\b",
         "\\b(click|open this link|enter|share|tell|send)\\b"
       ],
-      "reason": "An account, SIM or KYC threat is paired with a link or request for sensitive information."
+      "reason": "An account, SIM or KYC threat is paired with a link or request for sensitive information.",
+      "reason_hi": "अकाउंट, SIM या KYC बंद होने की धमकी के साथ लिंक खोलने या निजी जानकारी देने को कहा गया है।"
     },
     {
       "id": "SCAM_MALICIOUS_APP_OR_REMOTE_ACCESS",
@@ -129,6 +135,7 @@
         "\\b(screen[- ]sharing|remote access|give the agent access)\\b"
       ],
       "reason": "The message pressures the recipient to install an APK or grant remote/screen-sharing access.",
+      "reason_hi": "संदेश में दबाव डालकर APK इंस्टॉल करने या रिमोट/स्क्रीन-शेयरिंग की पहुँच देने को कहा गया है।",
       "supporting_any": [
         "\\b(urgent|immediately|penalty|bank|refund|challan|secure your money)\\b"
       ]
@@ -142,7 +149,8 @@
         "\\b(send|transfer|pay)\\b.{0,30}\\b(rs\\.?|inr|rupees?)\\b",
         "\\b(don.t call|do not call|phone is not working|using a friend.s number|explain later)\\b"
       ],
-      "reason": "An urgent money request uses an unusual number and discourages verification by calling."
+      "reason": "An urgent money request uses an unusual number and discourages verification by calling.",
+      "reason_hi": "पैसे की जल्दी मांग की गई है, किसी अनजान नंबर से संपर्क किया गया है और फोन करके पुष्टि करने से रोका गया है।"
     },
     {
       "id": "GENUINE_BANK_OTP_NOTICE",
@@ -153,7 +161,8 @@
         "\\b(otp|one[- ]time password|verification code)\\b",
         "\\b(do not share|never share|don.t share)\\b"
       ],
-      "reason": "An OTP notice includes a warning not to share the code. Still verify the sender independently."
+      "reason": "An OTP notice includes a warning not to share the code. Still verify the sender independently.",
+      "reason_hi": "OTP वाले संदेश में कोड शेयर न करने की चेतावनी दी गई है। फिर भी भेजने वाले की पहचान किसी दूसरे भरोसेमंद तरीके से जांचें।"
     },
     {
       "id": "GENUINE_TRANSACTION_ALERT",
@@ -164,7 +173,8 @@
         "\\b(transaction|debited|credited|payment of|amount of)\\b",
         "\\b(official app|app you used|number printed on your card|report it)\\b"
       ],
-      "reason": "A transaction notice directs the recipient to an independently known official channel."
+      "reason": "A transaction notice directs the recipient to an independently known official channel.",
+      "reason_hi": "लेन-देन का यह संदेश जानकारी लेने या शिकायत करने के लिए ऐसे आधिकारिक माध्यम का इस्तेमाल करने को कहता है, जिसे आप पहले से जानते हैं।"
     },
     {
       "id": "GENUINE_DELIVERY_OR_ORDER_UPDATE",
@@ -177,7 +187,8 @@
       "match_all": [
         "\\b(app|order history|expected delivery|packed|picked up|being prepared|tracking)\\b"
       ],
-      "reason": "A routine order or delivery status refers the recipient to the app or order history."
+      "reason": "A routine order or delivery status refers the recipient to the app or order history.",
+      "reason_hi": "ऑर्डर या डिलीवरी की सामान्य जानकारी के लिए ऐप या ऑर्डर हिस्ट्री देखने को कहा गया है।"
     },
     {
       "id": "SPAM_UNWANTED_BULK_PROMOTION",
@@ -190,7 +201,8 @@
       "match_all": [
         "\\b(offer|sale|catalogue|membership|admissions|promotional|marketing|discount|packages)\\b"
       ],
-      "reason": "A bulk marketing message provides an opt-out instruction. Unwanted does not automatically mean fraudulent."
+      "reason": "A bulk marketing message provides an opt-out instruction. Unwanted does not automatically mean fraudulent.",
+      "reason_hi": "यह बड़े पैमाने पर भेजा गया प्रचार संदेश है और इसमें ऐसे संदेश बंद करने का तरीका दिया गया है। अनचाहा संदेश होना अपने-आप में धोखाधड़ी नहीं है।"
     },
     {
       "id": "SAFE_PROMOTIONAL_INFORMATION",
@@ -203,7 +215,8 @@
       "exclude_any": [
         "\\b(otp|cvv|upi pin|digital arrest|pay.*(registration|processing) fee|guaranteed returns)\\b"
       ],
-      "reason": "A conventional promotion or event notice without an obvious credential request or fraudulent payment demand."
+      "reason": "A conventional promotion or event notice without an obvious credential request or fraudulent payment demand.",
+      "reason_hi": "यह किसी सामान्य ऑफर या कार्यक्रम की जानकारी है। इसमें साफ तौर पर लॉगिन या पेमेंट की गुप्त जानकारी नहीं मांगी गई है और न ही पैसे देने का धोखाधड़ी वाला दबाव है।"
     }
   ],
   "test_messages": [
