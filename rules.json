@@ -1,0 +1,1051 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_name": "India-focused message safety test dataset",
+  "purpose": "Defensive testing of message classification. All examples are synthetic.",
+  "language": [
+    "English",
+    "Hindi",
+    "Hinglish"
+  ],
+  "total_test_messages": 140,
+  "label_counts": {
+    "SCAM": 40,
+    "GENUINE": 30,
+    "SAFE_NORMAL": 50,
+    "SAFE_PROMO": 10,
+    "SPAM_UNWANTED": 10
+  },
+  "labels": {
+    "SCAM": "Deceptive or fraudulent message.",
+    "GENUINE": "Legitimate transactional or official-style control message; verify sender where relevant.",
+    "SAFE_NORMAL": "Ordinary personal, college, work, travel or daily-life message.",
+    "SAFE_PROMO": "Ordinary promotional or informational message; not automatically a scam.",
+    "SPAM_UNWANTED": "Unwanted bulk marketing; not automatically a scam."
+  },
+  "decision_policy": {
+    "rule_matching": "case_insensitive_regex",
+    "evaluation_order": "highest priority first",
+    "important": "These rules are starter heuristics, not a complete fraud detector. Do not mark a message SAFE only because no scam rule matched. Unknown or conflicting messages should be treated as UNCLASSIFIED or sent for further analysis.",
+    "safe_vs_scam": "Do not flag words such as OTP, bank, KYC, payment, offer or urgent in isolation. Evaluate the full context and the requested action.",
+    "privacy": "Do not store real OTPs, PINs, CVVs, passwords or full payment-card details in logs.",
+    "rule_schema": {
+      "match_any": "At least one regex must match when this field is present.",
+      "match_all": "Every regex in this list must match.",
+      "exclude_any": "If any regex matches, this rule is skipped.",
+      "supporting_any": "Optional extra context indicators; treat as supporting evidence, not a standalone trigger."
+    }
+  },
+  "rules": [
+    {
+      "id": "SCAM_OTP_OR_SECRET_REQUEST",
+      "label": "SCAM",
+      "category": "credential_theft",
+      "priority": 100,
+      "match_any": [
+        "\\b(share|send|tell| बताओ|forward)\\b.{0,45}\\b(otp|one[- ]time password|verification code)\\b",
+        "\\b(otp|one[- ]time password|verification code)\\b.{0,45}\\b(share|send|tell|provide)\\b",
+        "\\b(up(i)? pin|atm pin|debit card pin|cvv|card number)\\b.{0,55}\\b(share|send|tell|provide|enter)\\b"
+      ],
+      "exclude_any": [
+        "\\b(do not share|never share|don.t share)\\b"
+      ],
+      "reason": "A message asks the recipient to disclose an OTP, PIN, CVV or payment-card credentials."
+    },
+    {
+      "id": "SCAM_DIGITAL_ARREST_OR_POLICE_THREAT",
+      "label": "SCAM",
+      "category": "impersonation_threat",
+      "priority": 99,
+      "match_any": [
+        "\\bdigital arrest\\b",
+        "\\b(arrest warrant|police case|cyber crime department|customs penalty)\\b"
+      ],
+      "match_all": [
+        "\\b(transfer|pay|send|deposit|settlement amount|verification account)\\b"
+      ],
+      "reason": "An authority-style threat is combined with a demand for money."
+    },
+    {
+      "id": "SCAM_FAKE_JOB_UPFRONT_FEE",
+      "label": "SCAM",
+      "category": "job_or_internship_fee",
+      "priority": 98,
+      "match_any": [
+        "\\b(job|internship|work from home|work-from-home|data entry|part[- ]time work|joining)\\b"
+      ],
+      "match_all": [
+        "\\b(pay|payment|fee|deposit|recharge|transfer)\\b",
+        "\\b(registration|processing|onboarding|uniform|software|security|booking|activation)\\b"
+      ],
+      "reason": "A job or internship offer asks for an upfront payment or deposit."
+    },
+    {
+      "id": "SCAM_GUARANTEED_INVESTMENT_RETURN",
+      "label": "SCAM",
+      "category": "investment_fraud",
+      "priority": 97,
+      "match_any": [
+        "\\b(double your money|guaranteed (daily )?returns?|fixed (daily )?profits?|losses are impossible|no risk)\\b"
+      ],
+      "match_all": [
+        "\\b(invest|investment|crypto|trading|deposit|recharge|vip group)\\b"
+      ],
+      "reason": "An investment message promises guaranteed or impossible returns."
+    },
+    {
+      "id": "SCAM_FAKE_REFUND_OR_UPI_COLLECT",
+      "label": "SCAM",
+      "category": "upi_refund_trick",
+      "priority": 96,
+      "match_any": [
+        "\\b(refund|cashback|receive the money|credit the reward)\\b"
+      ],
+      "match_all": [
+        "\\b(approve the collect request|scan (our )?qr|enter your upi pin|pay to receive|share the otp)\\b"
+      ],
+      "reason": "A supposed refund or reward requires approving a collect request, sharing an OTP or entering a UPI PIN."
+    },
+    {
+      "id": "SCAM_BANK_KYC_OR_ACCOUNT_THREAT",
+      "label": "SCAM",
+      "category": "bank_impersonation",
+      "priority": 95,
+      "match_any": [
+        "\\b(bank account|account|card|kyc|fastag|sim card)\\b"
+      ],
+      "match_all": [
+        "\\b(blocked|blocked within|will be blocked|suspend|deactivat|blacklisted|expire|final warning)\\b",
+        "\\b(click|open this link|enter|share|tell|send)\\b"
+      ],
+      "reason": "An account, SIM or KYC threat is paired with a link or request for sensitive information."
+    },
+    {
+      "id": "SCAM_MALICIOUS_APP_OR_REMOTE_ACCESS",
+      "label": "SCAM",
+      "category": "malicious_app_or_remote_access",
+      "priority": 94,
+      "match_any": [
+        "\\b(install|download)\\b.{0,50}\\b(apk|app|application)\\b",
+        "\\b(screen[- ]sharing|remote access|give the agent access)\\b"
+      ],
+      "reason": "The message pressures the recipient to install an APK or grant remote/screen-sharing access.",
+      "supporting_any": [
+        "\\b(urgent|immediately|penalty|bank|refund|challan|secure your money)\\b"
+      ]
+    },
+    {
+      "id": "SCAM_FAMILY_EMERGENCY_MONEY_REQUEST",
+      "label": "SCAM",
+      "category": "impersonation_emergency",
+      "priority": 93,
+      "match_all": [
+        "\\b(send|transfer|pay)\\b.{0,30}\\b(rs\\.?|inr|rupees?)\\b",
+        "\\b(don.t call|do not call|phone is not working|using a friend.s number|explain later)\\b"
+      ],
+      "reason": "An urgent money request uses an unusual number and discourages verification by calling."
+    },
+    {
+      "id": "GENUINE_BANK_OTP_NOTICE",
+      "label": "GENUINE",
+      "category": "bank_otp_control",
+      "priority": 80,
+      "match_all": [
+        "\\b(otp|one[- ]time password|verification code)\\b",
+        "\\b(do not share|never share|don.t share)\\b"
+      ],
+      "reason": "An OTP notice includes a warning not to share the code. Still verify the sender independently."
+    },
+    {
+      "id": "GENUINE_TRANSACTION_ALERT",
+      "label": "GENUINE",
+      "category": "transaction_control",
+      "priority": 79,
+      "match_all": [
+        "\\b(transaction|debited|credited|payment of|amount of)\\b",
+        "\\b(official app|app you used|number printed on your card|report it)\\b"
+      ],
+      "reason": "A transaction notice directs the recipient to an independently known official channel."
+    },
+    {
+      "id": "GENUINE_DELIVERY_OR_ORDER_UPDATE",
+      "label": "GENUINE",
+      "category": "delivery_control",
+      "priority": 75,
+      "match_any": [
+        "\\b(order|parcel|delivery|return request|tracking)\\b"
+      ],
+      "match_all": [
+        "\\b(app|order history|expected delivery|packed|picked up|being prepared|tracking)\\b"
+      ],
+      "reason": "A routine order or delivery status refers the recipient to the app or order history."
+    },
+    {
+      "id": "SPAM_UNWANTED_BULK_PROMOTION",
+      "label": "SPAM_UNWANTED",
+      "category": "bulk_marketing",
+      "priority": 60,
+      "match_any": [
+        "\\b(reply stop|reply to unsubscribe|opt out|unsubscribe)\\b"
+      ],
+      "match_all": [
+        "\\b(offer|sale|catalogue|membership|admissions|promotional|marketing|discount|packages)\\b"
+      ],
+      "reason": "A bulk marketing message provides an opt-out instruction. Unwanted does not automatically mean fraudulent."
+    },
+    {
+      "id": "SAFE_PROMOTIONAL_INFORMATION",
+      "label": "SAFE_PROMO",
+      "category": "ordinary_promotion",
+      "priority": 50,
+      "match_any": [
+        "\\b(discount|offer|workshop|event|new menu|trial session|available in store)\\b"
+      ],
+      "exclude_any": [
+        "\\b(otp|cvv|upi pin|digital arrest|pay.*(registration|processing) fee|guaranteed returns)\\b"
+      ],
+      "reason": "A conventional promotion or event notice without an obvious credential request or fraudulent payment demand."
+    }
+  ],
+  "test_messages": [
+    {
+      "id": 1,
+      "expected_label": "SCAM",
+      "category": "fake_job",
+      "message": "Congratulations! Your number has been shortlisted for a part-time work-from-home job. Earn Rs. 5,000 every day by liking 10 YouTube videos. No interview, guaranteed income. Pay a refundable Rs. 499 registration fee to activate your ID."
+    },
+    {
+      "id": 2,
+      "expected_label": "SCAM",
+      "category": "fake_job",
+      "message": "Hi dear, we are hiring data entry operators across India. Salary Rs. 35,000 per month, only 2 hours daily, no experience needed. Send Aadhaar and PAN photo on WhatsApp now to confirm your seat."
+    },
+    {
+      "id": 3,
+      "expected_label": "SCAM",
+      "category": "task_fraud",
+      "message": "You can earn Rs. 200 for every product review. First complete these free tasks, then recharge your wallet with Rs. 2,000 to unlock the high-paying tasks and withdraw your profit."
+    },
+    {
+      "id": 4,
+      "expected_label": "SCAM",
+      "category": "fake_internship",
+      "message": "Selected! You have been offered an AI internship with an international company. Pay Rs. 1,499 today for the mandatory onboarding kit. Limited seats, offer valid for 15 minutes."
+    },
+    {
+      "id": 5,
+      "expected_label": "SCAM",
+      "category": "prize",
+      "message": "Your mobile number has won a new smartphone in our Diwali lucky draw! You only need to pay Rs. 299 delivery and processing charges. Claim here: [TEST LINK]"
+    },
+    {
+      "id": 6,
+      "expected_label": "SCAM",
+      "category": "investment",
+      "message": "Double your money in 7 days with our guaranteed trading plan. Minimum investment Rs. 5,000. No risk, fixed daily returns. Message me to join our private WhatsApp group."
+    },
+    {
+      "id": 7,
+      "expected_label": "SCAM",
+      "category": "fake_scholarship",
+      "message": "Student alert! Government scholarship of Rs. 25,000 approved for every college student. Pay Rs. 300 verification charges and share your bank details to receive the amount today."
+    },
+    {
+      "id": 8,
+      "expected_label": "SCAM",
+      "category": "fake_loan",
+      "message": "Pre-approved instant loan of Rs. 2 lakh with zero interest and no documents. Transfer a small file-opening fee first. Approval guaranteed for everyone, even with a low credit score."
+    },
+    {
+      "id": 9,
+      "expected_label": "SCAM",
+      "category": "fake_recruiter",
+      "message": "Work for a reputed MNC from home and earn Rs. 60,000 monthly. We do not conduct interviews. Send your bank account number, UPI ID and identity documents to receive your joining letter."
+    },
+    {
+      "id": 10,
+      "expected_label": "SCAM",
+      "category": "task_fraud",
+      "message": "Online shopping review project: earn Rs. 100 per rating. We will send you money for the first task. For the next task, scan our QR code and approve the payment request to receive Rs. 8,000."
+    },
+    {
+      "id": 11,
+      "expected_label": "SCAM",
+      "category": "fake_giveaway",
+      "message": "You are today's lucky mobile customer and have won Rs. 1,00,000 cashback. Pay Rs. 199 as a processing charge and share the OTP received on your phone so we can credit the reward."
+    },
+    {
+      "id": 12,
+      "expected_label": "SCAM",
+      "category": "fake_job",
+      "message": "Airport jobs available urgently: ground staff salary Rs. 48,000, direct joining, no exam. Send Rs. 1,200 for uniform and ID-card booking. Government-approved vacancies, limited slots!"
+    },
+    {
+      "id": 13,
+      "expected_label": "SCAM",
+      "category": "fake_customer_care",
+      "message": "For instant refund of your online shopping order, contact our senior customer-care executive on WhatsApp. Share your screen and install the support app from [TEST LINK]. Refund guaranteed within 2 minutes."
+    },
+    {
+      "id": 14,
+      "expected_label": "SCAM",
+      "category": "fake_franchise",
+      "message": "Become the owner of a popular food-brand franchise in your city for only Rs. 999 booking. Earn Rs. 1 lakh monthly with guaranteed customers. Pay the token now; agreement will be sent later."
+    },
+    {
+      "id": 15,
+      "expected_label": "SCAM",
+      "category": "fake_government_benefit",
+      "message": "A new government scheme is giving Rs. 10,000 to every citizen. Fill this form today and pay Rs. 99 processing charges. Forward this message to 10 groups to confirm your benefit."
+    },
+    {
+      "id": 16,
+      "expected_label": "SCAM",
+      "category": "fake_work",
+      "message": "Earn Rs. 3,000 daily by copying and pasting reviews from home. No skills or interview required. First deposit Rs. 500 to receive your employee login and daily tasks."
+    },
+    {
+      "id": 17,
+      "expected_label": "SCAM",
+      "category": "crypto_investment",
+      "message": "Join our VIP crypto signal group. Invest Rs. 10,000 today and receive fixed profits of Rs. 2,000 every day. Losses are impossible because our expert team guarantees returns."
+    },
+    {
+      "id": 18,
+      "expected_label": "SCAM",
+      "category": "fake_admission",
+      "message": "Direct admission confirmed in a top university without entrance exam. Your seat is reserved; transfer Rs. 5,000 to this personal UPI ID before midnight. Official receipt will be provided afterwards."
+    },
+    {
+      "id": 19,
+      "expected_label": "SCAM",
+      "category": "fake_insurance_bonus",
+      "message": "Your insurance policy has an unclaimed bonus of Rs. 75,000. Pay Rs. 750 tax clearance fee to release the amount. Send policy number and bank details on WhatsApp."
+    },
+    {
+      "id": 20,
+      "expected_label": "SCAM",
+      "category": "fake_part-time_job",
+      "message": "We are recruiting students for a simple mobile typing job. Earn Rs. 25,000 per week with 100% selection. Pay Rs. 399 for software access and send a screenshot of payment to start."
+    },
+    {
+      "id": 21,
+      "expected_label": "SCAM",
+      "category": "digital_arrest",
+      "message": "This is the cyber crime department. Your Aadhaar has been linked to an illegal parcel. Do not disconnect this video call. You are under digital arrest. Transfer Rs. 45,000 to the verification account immediately to avoid jail."
+    },
+    {
+      "id": 22,
+      "expected_label": "SCAM",
+      "category": "bank_kyc_threat",
+      "message": "Dear customer, your bank account will be blocked within 30 minutes because your KYC has expired. Click [TEST LINK] and enter your card number, PIN and OTP to keep your account active."
+    },
+    {
+      "id": 23,
+      "expected_label": "SCAM",
+      "category": "sim_block_threat",
+      "message": "Your SIM card will be permanently deactivated tonight due to incomplete verification. Call this number immediately and tell our executive the OTP you receive. Ignore this and all outgoing services will stop."
+    },
+    {
+      "id": 24,
+      "expected_label": "SCAM",
+      "category": "electricity_threat",
+      "message": "Electricity bill pending! Your power connection will be disconnected at 9:30 PM. Pay Rs. 7.50 immediately through [TEST LINK] and send the payment screenshot to the officer."
+    },
+    {
+      "id": 25,
+      "expected_label": "SCAM",
+      "category": "police_impersonation",
+      "message": "We have issued an arrest warrant against you for a parcel containing illegal items. Keep your phone switched on and pay the case settlement amount now. Do not tell your family or contact your local police station."
+    },
+    {
+      "id": 26,
+      "expected_label": "SCAM",
+      "category": "fake_bank_alert",
+      "message": "Rs. 49,999 has been debited from your account. To reverse this suspicious transaction, share the OTP and CVV with our bank support team on WhatsApp immediately."
+    },
+    {
+      "id": 27,
+      "expected_label": "SCAM",
+      "category": "upi_collect",
+      "message": "Your account is eligible for a Rs. 5,000 refund. Open your UPI app and approve the collect request to receive the money. Do it in the next 5 minutes or the refund will expire."
+    },
+    {
+      "id": 28,
+      "expected_label": "SCAM",
+      "category": "courier_threat",
+      "message": "Your parcel is held by customs due to an illegal item. Pay the penalty now using [TEST LINK] or police will visit your home. Do not contact the courier company; this is a confidential investigation."
+    },
+    {
+      "id": 29,
+      "expected_label": "SCAM",
+      "category": "fake_court_notice",
+      "message": "FINAL WARNING: A court case has been filed against your PAN for unpaid traffic fines. Download the attached APK to view the notice and clear the fine within 10 minutes."
+    },
+    {
+      "id": 30,
+      "expected_label": "SCAM",
+      "category": "account_suspension",
+      "message": "Your WhatsApp account is reported and will be deleted today. Verify your account by sharing the six-digit code sent to your phone with our support agent. Do not ignore this message."
+    },
+    {
+      "id": 31,
+      "expected_label": "SCAM",
+      "category": "fake_bank_officer",
+      "message": "I am calling from your bank's fraud department. We detected a problem with your debit card. Tell me the OTP that just arrived so I can cancel the transaction and secure your account."
+    },
+    {
+      "id": 32,
+      "expected_label": "SCAM",
+      "category": "family_emergency_impersonation",
+      "message": "Papa, my phone is not working properly. I am using a friend's number. Please send Rs. 18,000 urgently to this UPI ID. I will explain later. Don't call, I am in a meeting."
+    },
+    {
+      "id": 33,
+      "expected_label": "SCAM",
+      "category": "malicious_apk",
+      "message": "Your traffic challan is overdue. Download the attached eChallan.apk and install it now to avoid an extra Rs. 10,000 penalty. This link will expire in 10 minutes."
+    },
+    {
+      "id": 34,
+      "expected_label": "SCAM",
+      "category": "fake_fastag_alert",
+      "message": "Your FASTag will be blacklisted in 15 minutes due to a KYC issue. Click [TEST LINK] and enter your bank login, card PIN and OTP to reactivate it immediately."
+    },
+    {
+      "id": 35,
+      "expected_label": "SCAM",
+      "category": "fake_gas_connection",
+      "message": "Final notice: Your LPG connection will be cancelled tonight. Call our officer and share the OTP received on your phone to complete mandatory verification. Do not delay."
+    },
+    {
+      "id": 36,
+      "expected_label": "SCAM",
+      "category": "fake_refund_reversal",
+      "message": "Your failed UPI payment refund is stuck. To reverse the transaction, scan this QR code and enter your UPI PIN. Complete this within 5 minutes or the amount will be forfeited."
+    },
+    {
+      "id": 37,
+      "expected_label": "SCAM",
+      "category": "fake_police_video_call",
+      "message": "A complaint has been filed against your family member. Join this video call immediately and keep your camera on. Do not disconnect or inform anyone until our officer completes verification."
+    },
+    {
+      "id": 38,
+      "expected_label": "SCAM",
+      "category": "fake_credit_card_block",
+      "message": "Your credit card ending 4321 will be blocked today. Reply with your full card number, expiry date, CVV and OTP so we can stop the block."
+    },
+    {
+      "id": 39,
+      "expected_label": "SCAM",
+      "category": "fake_tax_penalty",
+      "message": "Income Tax Department final warning: Pay Rs. 12,500 within 20 minutes using this personal UPI ID or your bank account will be frozen and a warrant issued."
+    },
+    {
+      "id": 40,
+      "expected_label": "SCAM",
+      "category": "remote_access_fraud",
+      "message": "Your bank account has suspicious activity. Install this screen-sharing app from [TEST LINK] and give the agent access immediately so we can secure your money before it is stolen."
+    },
+    {
+      "id": 41,
+      "expected_label": "GENUINE",
+      "category": "bank_otp",
+      "message": "Your verification code is 482731. It is valid for 10 minutes. Do not share this OTP with anyone, including bank staff. If you did not request it, please ignore this message."
+    },
+    {
+      "id": 42,
+      "expected_label": "GENUINE",
+      "category": "bank_transaction_alert",
+      "message": "Alert: A transaction of Rs. 850.00 was made using your debit card ending 1234 at TEST STORE on 31-Oct-2026. If this was not you, use your bank's official app or the number printed on your card to report it."
+    },
+    {
+      "id": 43,
+      "expected_label": "GENUINE",
+      "category": "bank_credit_alert",
+      "message": "Your account ending 6789 has been credited with Rs. 12,500.00 on 31-Oct-2026. Available balance is shown in your official banking app. Never share your PIN or OTP."
+    },
+    {
+      "id": 44,
+      "expected_label": "GENUINE",
+      "category": "upi_payment",
+      "message": "You paid Rs. 245.00 to TEST MERCHANT using UPI on 31-Oct-2026. UPI reference: TEST123456789. Check your bank app for the transaction details."
+    },
+    {
+      "id": 45,
+      "expected_label": "GENUINE",
+      "category": "delivery_update",
+      "message": "Your parcel with tracking ID TEST123456789 is out for delivery today. The delivery partner may call you before arrival. You can check the status in the official shopping app."
+    },
+    {
+      "id": 46,
+      "expected_label": "GENUINE",
+      "category": "delivery_otp",
+      "message": "Your delivery verification code is 5739. Share it with the delivery agent only after you have received the parcel. This code is not a payment OTP."
+    },
+    {
+      "id": 47,
+      "expected_label": "GENUINE",
+      "category": "college_notice",
+      "message": "Notice: The Mathematics-I internal assessment will be held on Monday at 10:00 AM in the assigned classrooms. Bring your college ID card. Contact your department office for timetable queries."
+    },
+    {
+      "id": 48,
+      "expected_label": "GENUINE",
+      "category": "college_fee_reminder",
+      "message": "Reminder: Semester fee payment is due on 5-Nov-2026. Please pay through the student ERP portal using your own login. For assistance, contact the university accounts office during working hours."
+    },
+    {
+      "id": 49,
+      "expected_label": "GENUINE",
+      "category": "exam_notice",
+      "message": "Students are informed that the admit cards for the upcoming examination are available on the university portal. Please log in directly through the official college website and verify your details."
+    },
+    {
+      "id": 50,
+      "expected_label": "GENUINE",
+      "category": "appointment_reminder",
+      "message": "Reminder: Your appointment at the clinic is scheduled for 4:30 PM tomorrow. Please carry your previous reports and arrive 10 minutes early. To reschedule, contact the clinic using its official number."
+    },
+    {
+      "id": 51,
+      "expected_label": "GENUINE",
+      "category": "service_request",
+      "message": "Your service request TEST-20481 has been registered successfully. Our support team will review it and provide an update through the official app. No payment is required to register this request."
+    },
+    {
+      "id": 52,
+      "expected_label": "GENUINE",
+      "category": "train_ticket",
+      "message": "Your train ticket booking with PNR TEST123456 is confirmed. Please check the official railway app or website for current train status and platform information. Have a safe journey."
+    },
+    {
+      "id": 53,
+      "expected_label": "GENUINE",
+      "category": "bank_otp_login",
+      "message": "OTP for login to your bank's mobile app is 638215. It is valid for 5 minutes. Bank employees will never ask you to disclose this code. Do not share it."
+    },
+    {
+      "id": 54,
+      "expected_label": "GENUINE",
+      "category": "bank_debit_alert",
+      "message": "Rs. 1,250.00 has been debited from account ending 2468 for a purchase at TEST MART. Available balance can be checked in your bank's official app. If unrecognized, report it through official bank channels."
+    },
+    {
+      "id": 55,
+      "expected_label": "GENUINE",
+      "category": "upi_received",
+      "message": "You have received Rs. 700.00 from TEST SENDER via UPI. Reference number: TESTUPI7654321. Check your bank statement for the credited amount."
+    },
+    {
+      "id": 56,
+      "expected_label": "GENUINE",
+      "category": "lpg_booking",
+      "message": "Your LPG cylinder booking TEST-LPG-4521 has been registered. Delivery details and booking status are available through your gas provider's official app or customer portal."
+    },
+    {
+      "id": 57,
+      "expected_label": "GENUINE",
+      "category": "electricity_bill",
+      "message": "Your electricity bill for consumer number TEST45821 is Rs. 1,146 and is due on 12-Nov-2026. View and pay using the electricity provider's official website or app."
+    },
+    {
+      "id": 58,
+      "expected_label": "GENUINE",
+      "category": "mobile_recharge",
+      "message": "Your prepaid mobile recharge of Rs. 299 was successful. The plan details and validity are available in your telecom operator's official app."
+    },
+    {
+      "id": 59,
+      "expected_label": "GENUINE",
+      "category": "college_class_update",
+      "message": "Students: Tomorrow's Data Structures lecture will begin at 9:30 AM in Room B-204. Please bring your lab file. For timetable changes, follow the department's official notice board."
+    },
+    {
+      "id": 60,
+      "expected_label": "GENUINE",
+      "category": "exam_result_notice",
+      "message": "The semester result has been published on the university student portal. Log in through the college's official website to view your marksheet. Contact the examination branch for discrepancies."
+    },
+    {
+      "id": 61,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Hey, kal college ke baad canteen chalna? Mujhe tumse project ke baare mein bhi discuss karna hai."
+    },
+    {
+      "id": 62,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Good morning 😊 Aaj weather kaafi achha hai. Walk ke liye 7 baje aa rahe ho?"
+    },
+    {
+      "id": 63,
+      "expected_label": "SAFE_NORMAL",
+      "category": "friend_chat",
+      "message": "Bhai notes mil gaye, thanks! Main aaj raat tak assignment complete kar dunga."
+    },
+    {
+      "id": 64,
+      "expected_label": "SAFE_NORMAL",
+      "category": "family_chat",
+      "message": "Mummy, main library mein hoon. Class khatam hote hi ghar ke liye nikal jaunga."
+    },
+    {
+      "id": 65,
+      "expected_label": "SAFE_NORMAL",
+      "category": "family_chat",
+      "message": "Papa, aaj sabzi le aana please. Ghar mein aloo aur pyaaz khatam ho gaye hain."
+    },
+    {
+      "id": 66,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Sorry yaar, phone silent par tha isliye call receive nahi kar paya. Ab free hoon."
+    },
+    {
+      "id": 67,
+      "expected_label": "SAFE_NORMAL",
+      "category": "friend_chat",
+      "message": "Happy birthday! Bhagwan kare tumhara saal bahut achha jaye. Party pending hai 🎂"
+    },
+    {
+      "id": 68,
+      "expected_label": "SAFE_NORMAL",
+      "category": "group_chat",
+      "message": "Guys, Sunday ko cricket match 8 AM par hai. Apni team ke players confirm kar do."
+    },
+    {
+      "id": 69,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Aaj traffic bahut hai, main 10-15 minute late pahunchunga."
+    },
+    {
+      "id": 70,
+      "expected_label": "SAFE_NORMAL",
+      "category": "friend_chat",
+      "message": "Movie kaisi lagi? Ending mujhe achhi lagi, lekin first half thoda slow tha."
+    },
+    {
+      "id": 71,
+      "expected_label": "SAFE_NORMAL",
+      "category": "family_chat",
+      "message": "Didi, courier reception par rakh diya hai. Ghar aakar le lena."
+    },
+    {
+      "id": 72,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Kal wali photos bhej dena jab time mile. Group mein sab wait kar rahe hain."
+    },
+    {
+      "id": 73,
+      "expected_label": "SAFE_NORMAL",
+      "category": "friend_chat",
+      "message": "Main station pahunch gaya hoon. Tum platform par ho ya bahar?"
+    },
+    {
+      "id": 74,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Aaj lunch mein kya bana rahe ho? Main mess se nahi khaunga."
+    },
+    {
+      "id": 75,
+      "expected_label": "SAFE_NORMAL",
+      "category": "family_chat",
+      "message": "Nani ki tabiyat ab theek hai. Doctor ne do din rest karne ko kaha hai."
+    },
+    {
+      "id": 76,
+      "expected_label": "SAFE_NORMAL",
+      "category": "friend_chat",
+      "message": "Assignment ka question 4 samajh nahi aaya. Shaam ko saath mein solve karenge?"
+    },
+    {
+      "id": 77,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Meeting 6 baje rakhte hain. Usse pehle main apna kaam finish kar lunga."
+    },
+    {
+      "id": 78,
+      "expected_label": "SAFE_NORMAL",
+      "category": "group_chat",
+      "message": "Please group mein jo bhi notes upload kare, file ka naam subject aur unit ke saath rakhe."
+    },
+    {
+      "id": 79,
+      "expected_label": "SAFE_NORMAL",
+      "category": "personal_chat",
+      "message": "Thank you for helping me yesterday. Tumhare bina kaam complete nahi hota."
+    },
+    {
+      "id": 80,
+      "expected_label": "SAFE_NORMAL",
+      "category": "family_chat",
+      "message": "Main bazaar ja raha hoon. Kisi ko kuch mangwana ho to abhi bata dena."
+    },
+    {
+      "id": 81,
+      "expected_label": "SAFE_NORMAL",
+      "category": "college",
+      "message": "Kal Data Structures ki class Room B-204 mein hogi. Timetable ke according 9:30 AM par pahunchna."
+    },
+    {
+      "id": 82,
+      "expected_label": "SAFE_NORMAL",
+      "category": "college_group",
+      "message": "Sir ne linked list ke questions practice karne ko bola hai. Main PDF group mein share kar raha hoon."
+    },
+    {
+      "id": 83,
+      "expected_label": "SAFE_NORMAL",
+      "category": "study",
+      "message": "Does anyone have yesterday's Physics notes? I missed the last ten minutes of the lecture."
+    },
+    {
+      "id": 84,
+      "expected_label": "SAFE_NORMAL",
+      "category": "college",
+      "message": "Library aaj 8 PM tak open rahegi. Books return karne ka time yaad rakhna."
+    },
+    {
+      "id": 85,
+      "expected_label": "SAFE_NORMAL",
+      "category": "study_group",
+      "message": "Kal 2 PM par lab practice karenge. Apna laptop aur practical file le aana."
+    },
+    {
+      "id": 86,
+      "expected_label": "SAFE_NORMAL",
+      "category": "college",
+      "message": "Your attendance for the Computer Programming class has been updated on the student portal. Please check your own record."
+    },
+    {
+      "id": 87,
+      "expected_label": "SAFE_NORMAL",
+      "category": "college",
+      "message": "The English presentation groups are unchanged. Each group will get five minutes to present."
+    },
+    {
+      "id": 88,
+      "expected_label": "SAFE_NORMAL",
+      "category": "study",
+      "message": "Bhai, recursion ka program run ho gaya. Bas output ka screenshot report mein add karna hai."
+    },
+    {
+      "id": 89,
+      "expected_label": "SAFE_NORMAL",
+      "category": "college",
+      "message": "The college bus for the city route will leave from Gate 2 at 4:15 PM today."
+    },
+    {
+      "id": 90,
+      "expected_label": "SAFE_NORMAL",
+      "category": "study_group",
+      "message": "Sunday ko MST preparation ke liye library mein milte hain. Pehle Unit 3 revise karenge."
+    },
+    {
+      "id": 91,
+      "expected_label": "SAFE_NORMAL",
+      "category": "work",
+      "message": "I have pushed the latest changes to the feature branch. Please review the pull request when you get time."
+    },
+    {
+      "id": 92,
+      "expected_label": "SAFE_NORMAL",
+      "category": "team_chat",
+      "message": "Stand-up meeting moved to 10:30 AM tomorrow because the client call is scheduled earlier."
+    },
+    {
+      "id": 93,
+      "expected_label": "SAFE_NORMAL",
+      "category": "project",
+      "message": "The API response is working on my machine. I will share the endpoint and sample JSON in the team group."
+    },
+    {
+      "id": 94,
+      "expected_label": "SAFE_NORMAL",
+      "category": "work",
+      "message": "Please send the updated attendance sheet before lunch so I can prepare the monthly summary."
+    },
+    {
+      "id": 95,
+      "expected_label": "SAFE_NORMAL",
+      "category": "team_chat",
+      "message": "I have booked the small meeting room for 3 PM. Let me know if we need a projector."
+    },
+    {
+      "id": 96,
+      "expected_label": "SAFE_NORMAL",
+      "category": "project",
+      "message": "The database backup completed successfully. I will verify the latest records before closing the task."
+    },
+    {
+      "id": 97,
+      "expected_label": "SAFE_NORMAL",
+      "category": "work",
+      "message": "Thanks for the feedback on the report. I have corrected the chart labels and attached the revised version."
+    },
+    {
+      "id": 98,
+      "expected_label": "SAFE_NORMAL",
+      "category": "team_chat",
+      "message": "We can discuss the UI changes after the design review. No need to make another build right now."
+    },
+    {
+      "id": 99,
+      "expected_label": "SAFE_NORMAL",
+      "category": "work",
+      "message": "Your shift for Friday is 9 AM to 5 PM. Please confirm with the supervisor if you need a change."
+    },
+    {
+      "id": 100,
+      "expected_label": "SAFE_NORMAL",
+      "category": "project",
+      "message": "I found a small spelling mistake on the home page. I will fix it in the next commit."
+    },
+    {
+      "id": 101,
+      "expected_label": "SAFE_NORMAL",
+      "category": "travel",
+      "message": "The bus is running about ten minutes late. I will message you when it reaches the main stop."
+    },
+    {
+      "id": 102,
+      "expected_label": "SAFE_NORMAL",
+      "category": "travel",
+      "message": "We have reached Darbhanga safely. Thanks for checking in. Talk to you after dinner."
+    },
+    {
+      "id": 103,
+      "expected_label": "SAFE_NORMAL",
+      "category": "appointment",
+      "message": "Your dentist appointment is booked for Tuesday at 11:30 AM. Please carry your previous prescription if available."
+    },
+    {
+      "id": 104,
+      "expected_label": "SAFE_NORMAL",
+      "category": "daily_life",
+      "message": "Water supply will be unavailable in our building from 1 PM to 3 PM due to tank cleaning. Please store what you need."
+    },
+    {
+      "id": 105,
+      "expected_label": "SAFE_NORMAL",
+      "category": "travel",
+      "message": "Platform number has changed to 4 on the station display. Please check the live announcement before boarding."
+    },
+    {
+      "id": 106,
+      "expected_label": "SAFE_NORMAL",
+      "category": "daily_life",
+      "message": "The electrician will visit between 2 PM and 4 PM to check the ceiling fan. Please keep the room accessible."
+    },
+    {
+      "id": 107,
+      "expected_label": "SAFE_NORMAL",
+      "category": "appointment",
+      "message": "Your haircut appointment is confirmed for 6:00 PM today. Reply to the salon directly if you need to reschedule."
+    },
+    {
+      "id": 108,
+      "expected_label": "SAFE_NORMAL",
+      "category": "travel",
+      "message": "Cab driver is waiting near the north gate. The car number is visible in your ride app."
+    },
+    {
+      "id": 109,
+      "expected_label": "SAFE_NORMAL",
+      "category": "daily_life",
+      "message": "The apartment association meeting is on Saturday at 5 PM in the community hall."
+    },
+    {
+      "id": 110,
+      "expected_label": "SAFE_NORMAL",
+      "category": "travel",
+      "message": "I have booked the 7:20 AM train. We should leave home by 6 so we do not have to rush."
+    },
+    {
+      "id": 111,
+      "expected_label": "GENUINE",
+      "category": "order_update",
+      "message": "Your order TEST-84021 has been packed. The expected delivery date is 3-Nov-2026. Track it in the shopping app you used to place the order."
+    },
+    {
+      "id": 112,
+      "expected_label": "GENUINE",
+      "category": "service_update",
+      "message": "Your appliance repair visit is scheduled for 2-Nov-2026 between 12 PM and 2 PM. The technician details are available in the service app."
+    },
+    {
+      "id": 113,
+      "expected_label": "GENUINE",
+      "category": "payment_receipt",
+      "message": "Payment of Rs. 560 for invoice TEST-9912 was received successfully. This is an acknowledgement; no further action is required."
+    },
+    {
+      "id": 114,
+      "expected_label": "GENUINE",
+      "category": "subscription",
+      "message": "Your music subscription renews on 8-Nov-2026. You can review or change your plan in the official app."
+    },
+    {
+      "id": 115,
+      "expected_label": "GENUINE",
+      "category": "food_order",
+      "message": "Your food order TEST-FOOD-287 is being prepared. The app will show the delivery partner and estimated arrival time when assigned."
+    },
+    {
+      "id": 116,
+      "expected_label": "GENUINE",
+      "category": "return_update",
+      "message": "Return request TEST-RET-501 has been picked up. Refund status will be updated in your order history after inspection."
+    },
+    {
+      "id": 117,
+      "expected_label": "GENUINE",
+      "category": "broadband",
+      "message": "Your broadband service request TEST-NET-114 is marked as resolved. Restart your router and contact support through the provider app if the issue continues."
+    },
+    {
+      "id": 118,
+      "expected_label": "GENUINE",
+      "category": "bus_booking",
+      "message": "Your bus booking TEST-BUS-281 is confirmed for 6-Nov-2026. Please check the operator app for boarding point details."
+    },
+    {
+      "id": 119,
+      "expected_label": "GENUINE",
+      "category": "gas_service",
+      "message": "A routine safety inspection for your gas connection is scheduled for next week. The provider will confirm the visit through its official customer channel."
+    },
+    {
+      "id": 120,
+      "expected_label": "GENUINE",
+      "category": "digital_receipt",
+      "message": "Receipt TEST-RCPT-718 for Rs. 320 has been generated. You can view the itemised bill in the merchant's app."
+    },
+    {
+      "id": 121,
+      "expected_label": "SAFE_PROMO",
+      "category": "store_offer",
+      "message": "Weekend offer: Get 10% off on selected stationery items at our campus store until Sunday. Terms and participating products are listed at the counter."
+    },
+    {
+      "id": 122,
+      "expected_label": "SAFE_PROMO",
+      "category": "restaurant",
+      "message": "Our cafe has added a new paneer wrap to the menu. Visit this week and tell us what you think."
+    },
+    {
+      "id": 123,
+      "expected_label": "SAFE_PROMO",
+      "category": "mobile_plan",
+      "message": "A new prepaid plan with 1.5 GB data per day is available in the telecom operator's official app. Check plan details before recharging."
+    },
+    {
+      "id": 124,
+      "expected_label": "SAFE_PROMO",
+      "category": "bookstore",
+      "message": "Student reading week starts Monday. Selected technical books are available at a discounted price in the bookstore."
+    },
+    {
+      "id": 125,
+      "expected_label": "SAFE_PROMO",
+      "category": "event",
+      "message": "The college coding club is hosting a free beginner workshop on Python this Saturday. Registration is optional and available through the college event page."
+    },
+    {
+      "id": 126,
+      "expected_label": "SAFE_PROMO",
+      "category": "grocery",
+      "message": "This week, fresh vegetables are available at reduced prices at our neighbourhood store. Visit during regular business hours."
+    },
+    {
+      "id": 127,
+      "expected_label": "SAFE_PROMO",
+      "category": "streaming",
+      "message": "New episodes of the series you follow are now available. Open the streaming app to see the latest releases."
+    },
+    {
+      "id": 128,
+      "expected_label": "SAFE_PROMO",
+      "category": "fitness",
+      "message": "The community gym is offering a one-day trial session for new visitors this month. Ask the reception for timings and conditions."
+    },
+    {
+      "id": 129,
+      "expected_label": "SAFE_PROMO",
+      "category": "public_information",
+      "message": "The local library is organising a book exchange on Sunday from 11 AM to 2 PM. Everyone is welcome to attend."
+    },
+    {
+      "id": 130,
+      "expected_label": "SAFE_PROMO",
+      "category": "campus_event",
+      "message": "The college cultural fest passes are available from the student activity office. Check the official college notice for event timings."
+    },
+    {
+      "id": 131,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Hello! Repeated reminder: buy our kitchen storage set today. Reply STOP if you do not want further promotional messages."
+    },
+    {
+      "id": 132,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Mega sale is live! Up to 40% off on selected fashion items. Shop now in our app. Offer messages may repeat during the sale period."
+    },
+    {
+      "id": 133,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Dear customer, our coaching centre is accepting new admissions. Call our sales desk for course fees and batch timings."
+    },
+    {
+      "id": 134,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Loan offers available from multiple lenders. Compare interest rates and eligibility before applying. Reply STOP to opt out of these promotional updates."
+    },
+    {
+      "id": 135,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Get a new broadband connection with introductory pricing. Our sales team may contact you during business hours."
+    },
+    {
+      "id": 136,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Today's furniture catalogue is ready. Browse sofas, tables and beds in our store. Reply STOP to unsubscribe from marketing messages."
+    },
+    {
+      "id": 137,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Join our spoken English demo class this weekend. This is a promotional announcement from a local training centre."
+    },
+    {
+      "id": 138,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Health club membership renewal offer: ask our front desk about current plans and monthly fees."
+    },
+    {
+      "id": 139,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "New home cleaning packages are available in your area. Contact our business desk for a price list. Reply STOP to opt out."
+    },
+    {
+      "id": 140,
+      "expected_label": "SPAM_UNWANTED",
+      "category": "bulk_promotion",
+      "message": "Special jewellery collection now available in store. Visit during opening hours to see the designs and prices."
+    }
+  ]
+}
